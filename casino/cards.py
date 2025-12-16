@@ -10,49 +10,37 @@ from pathlib import Path
 
 
 class Card(ABC):
+    _ART_CACHE: dict[str, tuple[str, str]] = {}
+
     def __init__(self, category: str, identifier: int | str):
-        self.category   = category
+        self.category = category
         self.identifier = identifier
 
-        self.front = ""  # Face/value side. Shows value of card
-        self.back  = ""  # Hidden side. Does not show value of card
+        self.front = ""  # Face/value side
+        self.back  = ""  # Hidden side
 
         self.hidden: bool = True
 
     def load_art(self, FILE_PATH: str):
-        """
-        Loads ASCII art for all cards.
+        FILE_PATH = str(Path(FILE_PATH).resolve())
 
-        Arguments:
-            - FILE_PATH: file path to file containing ASCII art. Must be
-                relative to the project root directory `TERMINALCASINO`.
-        """
-        # Resolve absolute file path (cross-platform)
-        FILE_PATH = Path(FILE_PATH).resolve()
+        cached = Card._ART_CACHE.get(FILE_PATH)
+        if cached is not None:
+            self.front, self.back = cached
+            return
 
-        # Get front contents
-        with open(str(FILE_PATH), "r", encoding="utf-8") as file:
-            self.front = file.read()
+        with open(FILE_PATH, "r", encoding="utf-8") as file:
+            front = file.read()
 
-        # Get back contents
-        folder = FILE_PATH.parent
-        flipped_card_file = "flipped.txt"
-
-        # In pathlib.Path, `/` is overloaded to join paths
-        flipped_card_path = str(folder / flipped_card_file)
-
+        folder = Path(FILE_PATH).parent
+        flipped_card_path = str(folder / "flipped.txt")
         with open(flipped_card_path, "r", encoding="utf-8") as file:
-            self.back = file.read()
+            back = file.read()
+
+        self.front, self.back = front, back
+        Card._ART_CACHE[FILE_PATH] = (front, back)
 
     def __repr__(self) -> str:
-        """
-        Return an unambiguous string representation of the `Card` object.
-
-        This developer-oriented representation includes the class name
-        and key internal state (rank, suit, and hidden status). This is
-        useful for debugging and logging
-        """
-
         return (
             f"{self.__class__.__name__}("
             f"rank={self.rank!r}, suit={self.suit!r}, hidden={self.hidden!r})"
